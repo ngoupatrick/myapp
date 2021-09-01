@@ -1,0 +1,23 @@
+*******for heroku: files needed****************
+Procfile
+README.md
+requirements.txt
+setup.sh (for streamlit, not for flask)
+
+***************local (git + github: use token not passw)*****************
+  909  git clone https://github.com/ngoupatrick/myapp.git
+  910  cd myapp
+  911  
+  921  git status 
+  922  git add *
+  923  git commit -m "text"
+  924  git branch -M origin
+  925  git branch -M main
+  926  git remote add origin https://github.com/ngoupatrick/myapp.git
+  927  git remote add main https://github.com/ngoupatrick/myapp.git
+  928  git push -u origin main
+************for remote (transfert repo to heroku from local)****************
+  890  heroku login
+  891  heroku create dit-my-app
+  892  heroku open
+  894  git push heroku main
