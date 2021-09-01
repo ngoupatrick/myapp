@@ -1,4 +1,0 @@
-streamlit
-pillow
-face_recognition
-numpy

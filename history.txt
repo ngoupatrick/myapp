@@ -21,3 +21,10 @@ setup.sh (for streamlit, not for flask)
   891  heroku create dit-my-app
   892  heroku open
   894  git push heroku main
+  
+  *******launch heroku app ***************************
+  951  conda env list
+  952  conda activate for_face
+  953  heroku login
+  955  heroku open --app dit-my-app
+
