@@ -1,31 +1,33 @@
 import streamlit as st
-#from streamlit import caching
+#from streamlit import caching (#caching.clear_cache())
 from PIL import Image
 import face_recognition
 import numpy as np
 from scipy.spatial import distance
-#import copy
+import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+
+plt.style.use("ggplot")
 
 ##### defining functions ####
 
-def load_image(image_file):
+def load_image(image_file, size = (225, 225)):
     '''
     load single image on web page
     '''  
-    return Image.open(image_file).resize((225, 225), Image.ANTIALIAS)
+    return Image.open(image_file).resize(size, Image.ANTIALIAS)
 
-def show_images(list_images, component, clean = False):
+def show_images(list_images, component, clean = False, nb_images = 3):
     '''
     load images from a list of files
     ''' 
     if clean:
         for compon in component:#clean component
             compon.text('')
-        list_images.clear()#clean images lists
-        #caching.clear_cache()#clean cache
+        list_images.clear()#clean images lists        
     else:
         for i, image in enumerate(list_images):
-            if i < 3:
+            if i < nb_images:
                 component[i].image(load_image(image), width=200) 
    
 
@@ -77,16 +79,48 @@ def get_distances(encodings, list_images, ch_dist = 'Euclédienne'):
     
     return result_dict
 
-def compute_distance(list_images, ch_dist, component):
-    # if we reach 3 pics, we compare them    
-    if len(list_images) == 3:
-        # debut du calcul de ressemblance  
-        component.write("ok, we got 3!!! Now we process......")
-        component.write(get_distances(get_encodings(list_images=list_images), list_images = list_images, ch_dist = ch_dist))
-        
+def which_plot(ch_plot = 'Pyplot'):
+    if ch_plot == "Pyplot":
+        return pyplot_result
+    if ch_plot == "Plotly":
+        return plotly_result
+    return None
+
+def compute_distance(list_images, ch_dist, ch_plot, component, nb_images):
+    # show progress anime
+    im = component.image("./images/progress_1.gif") 
+    # if we reach a number of pics, we compare them 
+    if len(list_images) == nb_images:
+        # debut du calcul de ressemblance
+        result = get_distances(get_encodings(list_images=list_images), list_images = list_images, ch_dist = ch_dist)
+        #write result
+        c_col = component.columns(2)
+        c_col[0].write(result)
+        #plot result
+        f_plot = which_plot(ch_plot=ch_plot)
+        f_plot(result=result, ch_dist=ch_dist, component=c_col[1])
+    #clean image progress
+    im.empty()
+
+
+def pyplot_result(result, ch_dist, component):
+    x = [cle for cle in result.keys()]
+    y = [valeur for valeur in result.values()]
+    fig, ax = plt.subplots()
+    ax.bar(x, y)
+    ax.set_xticklabels(labels = x, rotation=45, ha='right')
+    component.pyplot(fig)  
+    
+def plotly_result(result, ch_dist, component):
+    x = [cle for cle in result.keys()]
+    y = [valeur for valeur in result.values()]
+    fig = go.Figure(data=go.Bar(x=x, y=y))
+    fig.update_layout(title = f'')
+    component.plotly_chart(fig )
+         
 # button to clear the list of images
-def clean_space(list_images, component):
-    show_images(list_images, component = component, clean=True)    
+def clean_space(list_images, component, nb_images):
+    show_images(list_images, component = component, clean=True, nb_images = nb_images)    
     
 #### end defining functions ####
 
@@ -101,35 +135,59 @@ def main():
     #init
     st.title("My APP")
     
-    #empty space
-    my_slot = st.empty()
-    
-    #choose a distance
-    list_distance = ['Euclédienne', 'Cosine']
-    choix_distance = st.radio("Choose a Distance", list_distance)
-    #my_slot.write(choix_distance)
-    list_of_image_upload = get_static_store()
-    
-    # format of file updated
-    # UploadedFile(id=1, name='keita.jpg', type='image/jpeg', size=42885)
-    img_uploaded = st.file_uploader("Upload three images", type=['png','jpeg', 'jpg'])
-
-    # show file already loaded
-    cols = st.columns(3)    
-    
-    # get loaded files 
-    if img_uploaded and len(list_of_image_upload)<3:    
-        list_of_image_upload.append(img_uploaded)
-        show_images(list_of_image_upload, component = cols)            
-        
-    # show file already loaded
-    cols_btn = st.columns(2)
-    #empty space for result
-    my_slot_ = st.columns(1)
-    #adding button
-    cols_btn[0].button(label = "Compute", on_click = compute_distance, args = [list_of_image_upload, choix_distance, my_slot_[0]])
-    cols_btn[1].button(label = "Clear file list", on_click = clean_space, args = [list_of_image_upload, cols])
+    #*******sidebar********#
+    sidebar = st.sidebar
+    #navigation    
+    list_menu = ["Home", "Compute distance", "ML Recommender", "About"]
+    rad_menu = sidebar.radio("Navigation: ", list_menu)
+    if rad_menu == "Compute distance":
             
+        #choose a distance
+        list_distance = ['Euclédienne', 'Cosine']
+        choix_distance = sidebar.radio("Choose a Distance", list_distance, key = "choix_distance")
+        #choose a number of pic to compare
+        number_pic = sidebar.number_input(
+            label = "How many pics to compare",
+            min_value = 2,
+            max_value = 5,
+            value = 3,
+            step = 1
+        )
+        #choose style graph
+        list_plot = ['Pyplot', 'Plotly']
+        choix_plot = sidebar.radio("Choose a plot style", list_plot, key = "choix_plot")
+        
+        
+        #*******end of sidebar******#
+        
+        list_of_image_upload = get_static_store()
+        
+        # format of file updated
+        # UploadedFile(id=1, name='keita.jpg', type='image/jpeg', size=42885)
+        img_uploaded = st.file_uploader("Upload three images", type=['png','jpeg', 'jpg'])
+
+        # show file already loaded
+        cols = st.columns(int(number_pic))  
+        
+        # get loaded files 
+        if img_uploaded and len(list_of_image_upload)<int(number_pic):
+            list_of_image_upload.append(img_uploaded)
+            show_images(list_of_image_upload, component = cols, nb_images = int(number_pic))           
+            
+        # show file already loaded
+        cols_btn = st.columns(2)
+        #empty space for result
+        my_slot_ = st.container()
+        my_slot_.write("")  
+        #adding button
+        cols_btn[0].button(label = "Compute", on_click = compute_distance, args = [list_of_image_upload, choix_distance, choix_plot, my_slot_, int(number_pic)])
+        cols_btn[1].button(label = "Clear file list", on_click = clean_space, args = [list_of_image_upload, cols, int(number_pic)])
+    if rad_menu == "Home":
+        st.write("Home")
+    if rad_menu == "ML Recommender":
+        st.write("ML Recommender")
+    if rad_menu == "About":
+        st.write("About")       
         
 
 
