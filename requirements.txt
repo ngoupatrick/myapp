@@ -4,4 +4,4 @@ face_recognition
 numpy
 scipy
 matplotlib
-plotly=5.3.1
+plotly==5.3.1
