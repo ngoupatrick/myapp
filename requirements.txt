@@ -1,8 +1,8 @@
 streamlit
 pillow
 face_recognition
-numpy
 scipy
+numpy
 matplotlib
 plotly==5.3.1
 opencv-contrib-python
